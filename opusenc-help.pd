@@ -1,8 +1,8 @@
-#N canvas 2421 22 531 384 10;
+#N canvas 2536 -51 531 384 10;
 #X msg 288 105 mode silk;
 #X msg 288 81 mode hybrid;
 #X msg 288 129 mode celt;
-#X obj 288 154 tgl 15 1 empty empty empty 17 7 0 10 -262144 -1 -1 0
+#X obj 288 154 tgl 15 1 empty empty empty 17 7 0 10 -262144 -1 -1 1
 1;
 #X msg 288 48 status;
 #X msg 288 239 bitrate 32000;
@@ -14,13 +14,12 @@
 1;
 #X msg 407 96 fec \$1;
 #X obj 288 329 s enc-opts;
-#X obj 57 124 opusenc~ 40;
-#X obj 56 262 tgl 50 0 empty empty empty 17 7 0 10 -262144 -1 -1 1
+#X obj 56 262 tgl 50 0 empty empty empty 17 7 0 10 -262144 -1 -1 0
 1;
 #X msg 56 322 \; pd dsp \$1;
 #X obj 73 100 r enc-opts;
 #X obj 250 119 vsl 15 128 127 0 0 0 empty empty empty 0 -9 0 10 -262144
--1 -1 0 1;
+-1 -1 11300 1;
 #X obj 57 225 s opus-packet;
 #X obj 57 65 readsf~;
 #X msg 57 23 open ../doc/sound/voice.wav \, 1;
@@ -32,8 +31,9 @@
 #X text 202 188 bps;
 #X msg 407 166 loss \$1;
 #X obj 410 128 hsl 64 15 0 100 0 0 empty empty empty -2 -8 0 10 -262144
--1 -1 0 1;
+-1 -1 3200 1;
 #X floatatom 407 148 5 0 0 0 - - -, f 5;
+#X obj 57 124 opusenc~ 40;
 #X connect 0 0 8 0;
 #X connect 1 0 8 0;
 #X connect 2 0 8 0;
@@ -45,16 +45,17 @@
 #X connect 9 0 8 0;
 #X connect 10 0 11 0;
 #X connect 11 0 8 0;
-#X connect 13 0 18 0;
-#X connect 13 0 23 0;
-#X connect 13 0 24 0;
-#X connect 13 1 17 0;
-#X connect 14 0 15 0;
-#X connect 16 0 13 0;
-#X connect 19 0 13 0;
-#X connect 20 0 19 0;
+#X connect 13 0 14 0;
+#X connect 15 0 29 0;
+#X connect 18 0 29 0;
+#X connect 18 1 19 0;
+#X connect 19 0 18 0;
+#X connect 22 0 20 0;
 #X connect 23 0 21 0;
-#X connect 24 0 22 0;
-#X connect 27 0 8 0;
-#X connect 28 0 29 0;
-#X connect 29 0 27 0;
+#X connect 26 0 8 0;
+#X connect 27 0 28 0;
+#X connect 28 0 26 0;
+#X connect 29 0 17 0;
+#X connect 29 0 22 0;
+#X connect 29 0 23 0;
+#X connect 29 1 16 0;
