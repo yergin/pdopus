@@ -1,0 +1,4 @@
+cmake_minimum_required(VERSION 2.8.11)
+project(PDOPUS C)
+
+add_subdirectory(opus)
