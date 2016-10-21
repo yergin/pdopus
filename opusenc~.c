@@ -33,6 +33,7 @@ typedef struct _opusenc_tilde
     t_symbol* _mode;
     int _fec;
     int _dtx;
+    int _packetLoss;
     float* _buffer;
     int _writePosition;
     Packet* _packetBuffer;
@@ -54,6 +55,7 @@ void opusenc_tilde_bitrate(t_opusenc_tilde* x, t_floatarg bitrate);
 void opusenc_tilde_mode(t_opusenc_tilde* x, t_symbol* s);
 void opusenc_tilde_fec(t_opusenc_tilde* x, t_floatarg enabled);
 void opusenc_tilde_dtx(t_opusenc_tilde* x, t_floatarg enabled);
+void opusenc_tilde_loss(t_opusenc_tilde* x, t_floatarg loss);
 t_int* opusenc_tilde_perform(t_int* w);
 void setEncoderOptions(t_opusenc_tilde* x);
 int setOpusSampleRate(t_opusenc_tilde* x, int sampleRate);
@@ -81,6 +83,7 @@ void opusenc_tilde_setup()
     class_addmethod(opusenc_tilde_class, (t_method)opusenc_tilde_mode, gensym("mode"), A_SYMBOL, 0);
     class_addmethod(opusenc_tilde_class, (t_method)opusenc_tilde_fec, gensym("fec"), A_FLOAT, 0);
     class_addmethod(opusenc_tilde_class, (t_method)opusenc_tilde_dtx, gensym("dtx"), A_FLOAT, 0);
+    class_addmethod(opusenc_tilde_class, (t_method)opusenc_tilde_loss, gensym("loss"), A_FLOAT, 0);
 }
 
 void* opusenc_tilde_new(t_floatarg frameSize)
@@ -98,6 +101,7 @@ void* opusenc_tilde_new(t_floatarg frameSize)
     x->_mode = gensym("hybrid");
     x->_fec = 1;
     x->_dtx = 1;
+    x->_packetLoss = 0;
     x->_buffer = 0;
     x->_writePosition = 0;
     x->_packetBuffer = 0;
@@ -238,6 +242,11 @@ void opusenc_tilde_status(t_opusenc_tilde* x)
     else
         post("DTX: %d", val);
     
+    err = opus_encoder_ctl(x->_encoder, OPUS_GET_PACKET_LOSS_PERC(&val));
+    if (err)
+        error("failed to get packet loss: %s", opus_strerror(err));
+    else
+        post("packet loss: %d", val);
 }
 
 void opusenc_tilde_bitrate(t_opusenc_tilde* x, t_floatarg bitrate)
@@ -248,7 +257,7 @@ void opusenc_tilde_bitrate(t_opusenc_tilde* x, t_floatarg bitrate)
     if (err)
         error("failed to set encoder bitrate to %d: %s", (int)bitrate, opus_strerror(err));
     else
-        verbose(LOG_LEVEL_NORMAL, "set bitrate to %d", (int)bitrate);
+        verbose(LOG_LEVEL_NORMAL, "set encoder bitrate to %d", (int)bitrate);
 }
 
 void opusenc_tilde_mode(t_opusenc_tilde* x, t_symbol* s)
@@ -301,12 +310,24 @@ void opusenc_tilde_dtx(t_opusenc_tilde* x, t_floatarg enabled)
         verbose(LOG_LEVEL_NORMAL, "set encoder DTX to %d", f);
 }
 
+void opusenc_tilde_loss(t_opusenc_tilde* x, t_floatarg loss)
+{
+    x->_packetLoss = loss;
+    
+    int err = opus_encoder_ctl(x->_encoder, OPUS_SET_PACKET_LOSS_PERC(loss));
+    if (err)
+        error("failed to set encoder packet loss to %d: %s", (int)loss, opus_strerror(err));
+    else
+        verbose(LOG_LEVEL_NORMAL, "set encoder packet loss to %d", (int)loss);
+}
+
 void setEncoderOptions(t_opusenc_tilde* x)
 {
     opusenc_tilde_bitrate(x, x->_bitrate);
     opusenc_tilde_mode(x, x->_mode);
     opusenc_tilde_fec(x, x->_fec);
     opusenc_tilde_dtx(x, x->_dtx);
+    opusenc_tilde_loss(x, x->_packetLoss);
 }
 
 int setOpusSampleRate(t_opusenc_tilde* x, int sampleRate)
