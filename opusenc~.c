@@ -14,8 +14,6 @@ enum LOG_LEVEL
     LOG_LEVEL_NORMAL
 };
 
-#if 1
-
 typedef struct _packet
 {
     int _size;
@@ -439,84 +437,3 @@ void outputPacket(t_opusenc_tilde* x)
     }
     x->_packetCount = 0;
 }
-
-#else
-
-typedef struct _opusenc_tilde
-{
-    t_object x_obj;
-    t_float _dc;
-    t_outlet* _packetOutlet;
-    t_outlet* _dbovOutlet;
-    t_clock* _clock;
-} t_opusenc_tilde;
-
-void opusenc_tilde_setup();
-void* opusenc_tilde_new(t_floatarg frameSize);
-void opusenc_tilde_free(t_opusenc_tilde* x);
-void opusenc_tilde_dsp(t_opusenc_tilde* x, t_signal** sp);
-t_int* opusenc_tilde_perform(t_int* w);
-void outputPacket(t_opusenc_tilde* x);
-
-void opusenc_tilde_setup()
-{
-    opusenc_tilde_class = class_new(gensym("opusenc~"),
-                                   (t_newmethod)opusenc_tilde_new,
-                                   (t_method)opusenc_tilde_free,
-                                   sizeof(t_opusenc_tilde),
-                                   CLASS_DEFAULT,
-                                   A_FLOAT,
-                                   0);
-    
-    class_addmethod(opusenc_tilde_class, (t_method)opusenc_tilde_dsp, gensym("dsp"), A_CANT, 0);
-    CLASS_MAINSIGNALIN(opusenc_tilde_class, t_opusenc_tilde, _dc);
-}
-
-void* opusenc_tilde_new(t_floatarg frameSize)
-{
-    t_opusenc_tilde* x = (t_opusenc_tilde*)pd_new(opusenc_tilde_class);
-    if (!x)
-        return 0;
-    
-    x->_packetOutlet = outlet_new(&x->x_obj, &s_list);
-    x->_dbovOutlet = outlet_new(&x->x_obj, &s_float);
-    x->_dc = 0;
-    x->_clock = clock_new(x, (t_method)outputPacket);
-
-    return x;
-}
-
-void opusenc_tilde_free(t_opusenc_tilde* x)
-{
-    clock_free(x->_clock);
-}
-
-void opusenc_tilde_dsp(t_opusenc_tilde* x, t_signal** sp)
-{
-    dsp_add(opusenc_tilde_perform, 3, x, sp[0]->s_vec, sp[0]->s_n);
-}
-
-t_int* opusenc_tilde_perform(t_int* w)
-{
-    t_opusenc_tilde* x = (t_opusenc_tilde*)(w[1]);
-    t_sample* in = (t_sample*)(w[2]);
-    int n = (int)(w[3]);
-    
-    clock_delay(x->_clock, 0);
-
-    return w + 4;
-}
-
-void outputPacket(t_opusenc_tilde* x)
-{
-    outlet_float(x->_dbovOutlet, 10);
-
-    t_atom list[MAX_PACKET_SIZE];
-
-    for (int c = 0; c < 300; ++c)
-        SETFLOAT(&list[c], c);
-
-    outlet_list(x->_packetOutlet, &s_list, 300, list);
-}
-
-#endif
