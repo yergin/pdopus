@@ -1,0 +1,7 @@
+#N canvas 3208 -293 200 198 10;
+#X obj 47 77 opusdec~ 40;
+#X obj 47 38 r opus-packet;
+#X obj 47 125 dac~;
+#X connect 0 0 2 0;
+#X connect 0 0 2 1;
+#X connect 1 0 0 0;
