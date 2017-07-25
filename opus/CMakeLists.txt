@@ -6,7 +6,7 @@ project (OPUS C)
 
 set(SRC_DIRS opus/src opus/celt opus/silk opus/silk/float)
 
-add_definitions(-DOPUS_BUILD -DHAVE_LRINT -DHAVE_LRINTF -DVAR_ARRAYS -DOPUS_EXPORT=)
+add_definitions(-DOPUS_BUILD -DENABLE_UPDATE_DRAFT -DHAVE_LRINT -DHAVE_LRINTF -DVAR_ARRAYS -DOPUS_EXPORT=)
 
 foreach(_dir ${SRC_DIRS})
   file(GLOB FILES ${_dir}/*.c ${_dir}/*.h)
