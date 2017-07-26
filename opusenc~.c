@@ -175,6 +175,9 @@ float frameDuration(int code)
         case OPUS_FRAMESIZE_20_MS: return 20;
         case OPUS_FRAMESIZE_40_MS: return 40;
         case OPUS_FRAMESIZE_60_MS: return 60;
+        case OPUS_FRAMESIZE_80_MS: return 80;
+        case OPUS_FRAMESIZE_100_MS: return 100;
+        case OPUS_FRAMESIZE_120_MS: return 120;
         default:
             break;
     }

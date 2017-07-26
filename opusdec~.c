@@ -28,6 +28,9 @@ typedef struct _opusdec_tilde
     int _writePosition;
     int _readPosition;
     int _framesDecoded;
+    unsigned char* _packet;
+    int _packetSize;
+    int _lostPrevious;
 } t_opusdec_tilde;
 
 void opusdec_tilde_setup();
@@ -72,6 +75,9 @@ void* opusdec_tilde_new(t_floatarg frameSize)
     x->_writePosition = 0;
     x->_readPosition = 0;
     x->_framesDecoded = 0;
+    x->_packet = (unsigned char*)malloc(MAX_PACKET_SIZE);
+    x->_packetSize = 0;
+    x->_lostPrevious = 0;
     
     int err = 0;
     x->_decoder = opus_decoder_create(x->_sampleRate, 1, &err);
@@ -95,6 +101,14 @@ void opusdec_tilde_free(t_opusdec_tilde* x)
     {
         opus_decoder_destroy(x->_decoder);
         x->_decoder = 0;
+    }
+
+    if (x->_frameBuffer) {
+        free(x->_frameBuffer);
+    }
+
+    if (x->_packet) {
+        free(x->_packet);
     }
 }
 
@@ -156,26 +170,30 @@ void opusdec_tilde_reset(t_opusdec_tilde* x)
     x->_framesDecoded = 0;
 }
 
-void opusdec_tilde_bang(t_opusdec_tilde* x)
-{
-    int decoded = opus_decode_float(x->_decoder, 0, 0, x->_frameBuffer + x->_writePosition, x->_opusFrameSize, 0);
-    if (decoded != x->_opusFrameSize)
+void advanceWritePosition(t_opusdec_tilde* x, int samples) {
+    if (samples != x->_opusFrameSize)
     {
-        error("error generating samples");
+        error("decoded samples do not match frameSize");
         return;
     }
-    
-    verbose(LOG_LEVEL_NORMAL, "generated %d samples from decoder state", decoded);
-    
-    x->_writePosition = (x->_writePosition + decoded) % x->_frameBufferSize;
+
+    x->_writePosition = (x->_writePosition + samples) % x->_frameBufferSize;
     x->_framesDecoded = 1;
 }
 
-void opusdec_tilde_packet(t_opusdec_tilde* x, t_symbol* s, int argc, t_atom* argv)
+void opusdec_tilde_bang(t_opusdec_tilde* x)
 {
-    verbose(LOG_LEVEL_NORMAL, "packet of size %d received", argc);
-    
-    unsigned char d[MAX_PACKET_SIZE];
+    if (x->_lostPrevious) {
+        int decoded = opus_decode_float(x->_decoder, 0, 0, x->_frameBuffer + x->_writePosition, x->_opusFrameSize, 0);
+        advanceWritePosition(x, decoded);
+        verbose(LOG_LEVEL_NORMAL, "generated %d PLC samples", decoded);
+    }
+    x->_lostPrevious = 1;
+}
+
+void loadPacket(t_opusdec_tilde* x, t_symbol* s, int argc, t_atom* argv)
+{
+    x->_packetSize = 0;
     for (int i = 0; i < argc; ++i)
     {
         if (argv[i].a_type != A_FLOAT || argv[i].a_w.w_float != (int)argv[i].a_w.w_float || argv[i].a_w.w_float < 0 || argv[i].a_w.w_float > 255)
@@ -184,20 +202,33 @@ void opusdec_tilde_packet(t_opusdec_tilde* x, t_symbol* s, int argc, t_atom* arg
             return;
         }
         
-        d[i] = (int)argv[i].a_w.w_float;
+        x->_packet[i] = (int)argv[i].a_w.w_float;
     }
-    
-    int decoded = opus_decode_float(x->_decoder, d, argc, x->_frameBuffer + x->_writePosition, x->_opusFrameSize, 0);
-    if (decoded != x->_opusFrameSize)
-    {
-        error("error decoding packet of size %d", argc);
+    x->_packetSize = argc;    
+}
+
+void opusdec_tilde_packet(t_opusdec_tilde* x, t_symbol* s, int argc, t_atom* argv)
+{
+    verbose(LOG_LEVEL_NORMAL, "packet of size %d received", argc);
+
+    loadPacket(x, s, argc, argv);
+
+    if (!x->_packetSize) {
+        opusdec_tilde_bang(x);
         return;
     }
+
+    int decoded = 0;
+    if (x->_lostPrevious) {
+        decoded = opus_decode_float(x->_decoder, x->_packet, x->_packetSize, x->_frameBuffer + x->_writePosition, x->_opusFrameSize, 1);
+        advanceWritePosition(x, decoded);
+        verbose(LOG_LEVEL_NORMAL, "decoded %d FEC samples", decoded);
+    }
+    x->_lostPrevious = 0;
     
+    decoded = opus_decode_float(x->_decoder, x->_packet, x->_packetSize, x->_frameBuffer + x->_writePosition, x->_opusFrameSize, 0);
+    advanceWritePosition(x, decoded);
     verbose(LOG_LEVEL_NORMAL, "decoded %d samples from a packet of size %d", decoded, argc);
-    
-    x->_writePosition = (x->_writePosition + decoded) % x->_frameBufferSize;
-    x->_framesDecoded = 1;
 }
 
 void readFrameBuffer(t_opusdec_tilde* x, float* out)
