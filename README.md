@@ -7,5 +7,7 @@ OPUS encoder and decoder for Pure Data
 - Ninja
 
 To build, run:
-```cmake -GNinja
-ninja all```
+```
+cmake -GNinja
+ninja all
+```
